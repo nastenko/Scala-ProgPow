@@ -1,0 +1,31 @@
+# IDE/Editor files
+.idea
+
+# Eclipse/Scala IDE files
+.classpath
+.project
+.settings
+.cache-main
+.cache-tests
+/bin/
+
+# SBT's temporary files
+.history
+
+# scala build folders
+target
+
+# dotfiles
+.dockerignore
+.editorconfig
+
+# standalone docker
+Dockerfile
+
+# logs
+*.log
+
+# db files
+
+*.data
+
