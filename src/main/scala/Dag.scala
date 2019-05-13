@@ -5,15 +5,37 @@ import scala.annotation.tailrec
 import akka.util.ByteString
 import java.nio.{ByteBuffer, ByteOrder}
 import java.util
+import java.io.{File, FileInputStream, FileOutputStream}
 
+import DagMode.DagMode
+
+import scala.util.{Failure, Random, Success, Try}
 import fr.cryptohash.{Keccak256, Keccak512}
 import org.spongycastle.util.encoders.Hex
 
-case class Dag(epoch: Long){
+object DagMode extends Enumeration {
+  type DagMode = Value
+  val Full, Light = Value
+}
 
-  lazy val cache: Array[Int] = Dag.makeCache(epoch)
+case class Dag(epoch: Long, mode: DagMode){
 
-  def apply(index: Int): Array[Int] = Dag.calcDatasetItem(cache, index)
+  private lazy val cache: Array[Int] = Dag.makeCache(epoch)
+  private lazy val dag =
+    if (!Dag.dagFile(epoch).exists())
+      Dag.generateDagAndSaveToFile(epoch, cache)
+    else {
+      val res = Dag.loadDagFromFile(epoch)
+      res.failed.foreach { ex => println(ex, "Cannot read DAG from file") }
+      res.getOrElse(Dag.generateDagAndSaveToFile(epoch, cache))
+  }
+
+  def apply(index: Int): Array[Int] = {
+    mode match {
+      case DagMode.Light => Dag.calcDatasetItem(cache, index)
+      case DagMode.Full => dag(index)
+    }
+  }
 }
 
 object Dag {
@@ -191,5 +213,63 @@ object Dag {
       }
     }
     bytesToInts(kec512(intsToBytes(mix)))
+  }
+
+  private def dagFile(epoch: Long): File = {
+    new File(s"./dag-${Hex.toHexString(Dag.seed(epoch).take(8).toArray[Byte])}")
+  }
+
+  private val DagFilePrefix: ByteString = ByteString(Array(0xfe, 0xca, 0xdd, 0xba, 0xad, 0xde, 0xe1, 0xfe).map(_.toByte))
+
+  def generateDagAndSaveToFile(epoch: Long, cache: Array[Int]): Array[Array[Int]] = {
+
+    val file = dagFile(epoch)
+    if (file.exists()) file.delete()
+    file.getParentFile.mkdirs()
+    file.createNewFile()
+
+    val outputStream = new FileOutputStream(dagFile(epoch).getAbsolutePath)
+    outputStream.write(DagFilePrefix.toArray[Byte])
+
+    val dagNumHashes = (dagSize(epoch) / HASH_BYTES).toInt
+    val res = new Array[Array[Int]](dagNumHashes)
+
+    (0 until dagNumHashes).foreach { i =>
+      val item = calcDatasetItem(cache, i)
+      outputStream.write(intsToBytes(item))
+      res(i) = item
+
+      if (i % 100000 == 0) println(s"Generating DAG ${((i / dagNumHashes.toDouble) * 100).toInt}%")
+    }
+
+    Try(outputStream.close())
+
+    res
+  }
+
+  def loadDagFromFile(epoch: Long): Try[Array[Array[Int]]] = {
+
+    val inputStream = new FileInputStream(dagFile(epoch).getAbsolutePath)
+
+    val prefix = new Array[Byte](8)
+    if (inputStream.read(prefix) != 8 || ByteString(prefix) != DagFilePrefix) {
+      Failure(new RuntimeException("Invalid DAG file prefix"))
+    } else {
+      val buffer = new Array[Byte](HASH_BYTES)
+      val dagNumHashes = (dagSize(epoch) / HASH_BYTES).toInt
+      val res = new Array[Array[Int]](dagNumHashes)
+      var index = 0
+
+      while (inputStream.read(buffer) > 0) {
+        if (index % 100000 == 0) println(s"Loading DAG from file ${((index / res.length.toDouble) * 100).toInt}%")
+        res(index) = bytesToInts(buffer)
+        index += 1
+      }
+
+      Try(inputStream.close())
+
+      if (index == dagNumHashes) Success(res)
+      else Failure(new RuntimeException("DAG file ended unexpectedly"))
+    }
   }
 }

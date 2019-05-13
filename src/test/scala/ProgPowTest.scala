@@ -8,6 +8,8 @@ import java.lang.Long
 
 class ProgPowTest extends FunSuite {
 
+  val testMode = DagMode.Light // DagMode.Full
+
   test("popcount") {
     assert(ProgPow.popcount(0x00000000L) == 0L)
     assert(ProgPow.popcount(0x00000001L) == 1L)
@@ -199,7 +201,7 @@ class ProgPowTest extends FunSuite {
   }
 
   test("dagItem"){
-    val prog_pow_0 = new ProgPow(0)
+    val prog_pow_0 = new ProgPow(0, testMode)
 
     assert(prog_pow_0.dagItem(0) == 0x2922db22L)
     assert(prog_pow_0.dagItem(15) == 0xc2ce9b00L)
@@ -208,7 +210,7 @@ class ProgPowTest extends FunSuite {
     assert(prog_pow_0.dagItem(32000) == 0xf5d98db5L)
     assert(prog_pow_0.dagItem(32015) == 0xc0ebbaa3L)
 
-    val prog_pow_20 = new ProgPow(20)
+    val prog_pow_20 = new ProgPow(20, testMode)
 
     assert(prog_pow_20.dagItem(0) == 0xf6145687L)
     assert(prog_pow_20.dagItem(15) == 0x79b02af8L)
@@ -258,7 +260,7 @@ class ProgPowTest extends FunSuite {
       0x6BAFB2D5L, 0x903ACC83L, 0x919B1688L, 0x678A8A38L
     )
 
-    val prog_pow_1 = new ProgPow(1)
+    val prog_pow_1 = new ProgPow(1, DagMode.Light)
 
     val mix_0 = Array.fill(ProgPow.Lanes)(Array.fill[Long](ProgPow.Regs)(0L))
     val dagCache = prog_pow_1.cacheDag(0L, mix_0)
@@ -314,7 +316,7 @@ class ProgPowTest extends FunSuite {
       0x843A6220L, 0x4533B2A4L, 0x85158F25L, 0xA12B9262L, 0xF6F3FE3L,  0xD8E54841L, 0xADB0C0D7L, 0x24CC75ACL, 0x3B1ADFA0L, 0x5F53E038L, 0x678360CL,  0xD4B2F3A7L, 0x52E35EF5L, 0xEC793156L, 0xF994F8E3L, 0xD72DA783L, 0xB1870531L, 0x35C3DAC7L, 0xAAE7197CL, 0xDCBB3C24L, 0x8874C0C6L, 0xB41C9DBFL, 0xA4F74044L, 0x6AE51C36L, 0x60FB06CEL, 0x9F3A9CAAL, 0x1E377A7L,  0x1E20384BL, 0x27E1613DL, 0xEA213813L, 0x81622BB3L, 0x7CCECF69L
     )
 
-    val prog_pow_1 = new ProgPow(1)
+    val prog_pow_1 = new ProgPow(1, DagMode.Light)
 
     val prog_seed_0 = Array[Long](0L, 0L)
     val mix_0 = Array.fill(ProgPow.Lanes)(Array.fill[Long](ProgPow.Regs)(0L))
@@ -339,7 +341,7 @@ class ProgPowTest extends FunSuite {
 
   test("progPowHash"){
 
-    val progPow0 = new ProgPow(0)
+    val progPow0 = new ProgPow(0, testMode)
 
     assert(
       progPow0.hash(
@@ -401,7 +403,7 @@ class ProgPowTest extends FunSuite {
       )
     )
 
-    val progPow1 = new ProgPow(1)
+    val progPow1 = new ProgPow(1, testMode)
 
     assert(
       progPow1.hash(
@@ -473,7 +475,7 @@ class ProgPowTest extends FunSuite {
       )
     )
 
-    val progPow333 = new ProgPow(333)
+    val progPow333 = new ProgPow(333, testMode)
 
     assert(
       progPow333.hash(

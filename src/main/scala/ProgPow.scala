@@ -2,15 +2,21 @@
 // https://github.com/solardiz/c-progpow
 //
 // NOTES:
-// Currently only a lightweight mode of hashing is implemented (DAG nodes are computed on the fly, without storing whole DAG in memory).
+// Current implementation has two modes:
+//  - light mode (DagMode.Light): DAG nodes are computed on the fly, without storing a whole DAG in memory;
+//  - full mode  (DagMode.Full) : whole DAG is stored in memory.
 // Lightweight computation is speeded up (about 7.7 times) by caching intermediate DAG nodes per hash computation.
 // Such a cache takes 32 KB of memory.
-// Current implementation computes one hash in lightweight mode for about 0.16 seconds (Intel i5-750).
+// Current implementation computes one hash in light mode for about 0.16 seconds (Intel i5-750).
+// Full mode (DagMode.Full) significantly speeds up hashing in comparison with the light mode, but also a significant amount of memory is needed (1 GB and more, depending on epoch).
+// In the full mode a DAG for an each epoch is computed once, then stored into a file so afterwards it can be just loaded from the file.
 //
 // Since JVM doesn't support unsigned integers, the Long is used to store and perform arithmetical operations on 32-bit unsigned integers.
 //
 import java.math.BigInteger
 import java.lang.Long
+
+import DagMode.DagMode
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -28,14 +34,14 @@ case class KissMix (
   }
 }
 
-class ProgPow (epoch: Int) {
+class ProgPow (epoch: Int, dagMode: DagMode) {
 
   private val MaxUint32 = 0xFFFFFFFFL
   private val DagNodeLength = 16 // in Ints
 
-  private val dag = Dag(epoch)
+  private val dag = Dag(epoch, dagMode)
 
-  // to speedup a lightweight computation of hash
+  // to speedup the lightweight computation of a hash
   private val nodesCache = mutable.Map[Int, Array[Int]]()
 
   def dagItem(index: Int): Long = {
